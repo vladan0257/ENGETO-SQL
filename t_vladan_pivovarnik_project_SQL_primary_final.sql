@@ -1,30 +1,52 @@
+-- R. 22 - 37: Pod aliasem kom spoj pres kod komodity tabulku s cenami komodit s tabulkou se jmeny komodit. 
+-- V teto nove tabulce vrat celorepublikove prumerne ceny komodit za kazdy rok.
+-- R. 39 - 52: Pod aliasem mz spoj pres kody hospodarskych odvetvi tabulku prumernych mezd s tabulkou se 
+-- jmeny hospodarskych odvetvi. V teto nove tabulce vrat prumerne mzdy v jednotlivych odvetvich vzdy za 
+-- jeden rok.
+-- R. 52: Spoj tabulky kom a mz, a to pres hodnoty roku.
+-- R. 10 - 21: Ze spojeni techto dvou tabulek vytahni vybranne hodnoty a uloz je do nove tabulky 
+-- t_vladan_pivovarnik_project_SQL_primary_final
+
 CREATE OR REPLACE TABLE t_vladan_pivovarnik_project_SQL_primary_final AS
-	SELECT 
-		cp.id AS hrube_mzdy_id,
-		cp.value AS hrube_mzdy_prumer_czk,
-		cp.payroll_year AS hrube_mzdy_rok,
-		cp.payroll_quarter AS hrube_mzdy_kvartal,
-		cp.industry_branch_code AS hrube_mzdy_odvetvi_kod,
-		cpib.name AS hrube_mzdy_odvetvi_jmeno,	
-		cprcat.name AS komodita, 
-		cprcat.price_unit AS komodita_merna_jednotka,
-		cprcat.price_value AS komodita_merna_jednotka_mnozstvi,
-		cpr.region_code AS komodita_kraj,
-		cpr.value AS komodita_cena	-- cena za mnozstvi merne jednotky komodity v danem kraji a kvartale daneho roku
-	FROM czechia_payroll AS cp
-	JOIN czechia_payroll_value_type AS cpvt ON cp.value_type_code = cpvt.code
-	LEFT JOIN czechia_payroll_unit AS cpu ON cp.unit_code = cpu.code
-	LEFT JOIN czechia_payroll_industry_branch AS cpib ON cp.industry_branch_code = cpib.code
-	LEFT JOIN czechia_payroll_calculation AS cpc ON cp.calculation_code = cpc.code
-	LEFT JOIN czechia_price AS cpr ON
-		cp.payroll_year IN (YEAR(cpr.date_from), YEAR(cpr.date_to)) 
-		AND (
-			(cp.payroll_quarter = 1 AND MONTH(cpr.date_from) AND MONTH(cpr.date_to) IN (1, 2, 3)) OR 
-			(cp.payroll_quarter = 2 AND MONTH(cpr.date_from) AND MONTH(cpr.date_to) IN (4, 5, 6)) OR 
-			(cp.payroll_quarter = 3 AND MONTH(cpr.date_from) AND MONTH(cpr.date_to) IN (7, 8, 9)) OR 
-			(cp.payroll_quarter = 4 AND MONTH(cpr.date_from) AND MONTH(cpr.date_to) IN (10, 11, 12))
-		)
-	LEFT JOIN czechia_price_category AS cprcat ON cpr.category_code = cprcat.code
-	WHERE 
-		cpvt.name LIKE "%mzda%" AND 
-		cpu.name LIKE "%kè%";
+	SELECT
+	    mz.rok,
+	    mz.hrube_mzdy_prumer_czk,
+	    mz.hrube_mzdy_odvetvi_kod,
+	    mz.hrube_mzdy_odvetvi_jmeno,
+	    kom.komodita_jmeno,
+	    kom.komodita_kod,
+	    kom.komodita_merna_jednotka,
+	    kom.komodita_merna_jednotka_mnozstvi,
+	    kom.komodita_cena
+	FROM (
+	    SELECT
+	        cprcat.name AS komodita_jmeno,
+	        cprcat.code AS komodita_kod,
+	        cprcat.price_unit AS komodita_merna_jednotka,
+	        cprcat.price_value AS komodita_merna_jednotka_mnozstvi,
+	        AVG(cpr.value) AS komodita_cena,
+	        CASE
+	            WHEN YEAR(cpr.date_from) = YEAR(cpr.date_to) THEN YEAR(cpr.date_to)
+	            ELSE NULL
+	        END AS rok
+	    FROM czechia_price AS cpr
+	    LEFT JOIN czechia_price_category AS cprcat ON cpr.category_code = cprcat.code
+	    GROUP BY 
+	        cpr.category_code,
+	        YEAR(cpr.date_to)
+	) AS kom
+	LEFT JOIN (
+	    SELECT 
+	        AVG(cpay.value) AS hrube_mzdy_prumer_czk,
+	        cpay.payroll_year AS rok,
+	        cpay.industry_branch_code AS hrube_mzdy_odvetvi_kod,
+	        cpib.name AS hrube_mzdy_odvetvi_jmeno
+	    FROM czechia_payroll AS cpay
+	    LEFT JOIN czechia_payroll_industry_branch AS cpib ON cpay.industry_branch_code = cpib.code
+	    WHERE 
+	        cpay.value_type_code = 5958 AND -- 5958 -> prumer. hruba mzda na zamestnance 
+	        cpay.unit_code = 200 -- 200 -> czk
+	    GROUP BY
+	        cpay.industry_branch_code,
+	        cpay.payroll_year
+	) AS mz ON kom.rok = mz.rok;
