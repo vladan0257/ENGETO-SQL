@@ -67,22 +67,48 @@ ORDER BY
 
 -- Existuje rok, ve kterém byl meziroèní nárùst cen potravin výraznì vyšší než rùst mezd (vìtší než 10 %)?
 
-SELECT
-    t_second.rok,
-    ROUND(100 * (AVG(t_second.hrube_mzdy_prumer_czk) / AVG(t_first.hrube_mzdy_prumer_czk) - 1), 2) AS 
-    mezirocni_procentualni_zmena_prumernych_hrubych_mezd_vsech_odvetvi,
-    ROUND(100 * (AVG(t_second.komodita_cena) / AVG(t_first.komodita_cena) - 1), 2) AS
-    mezirocni_procentualni_zmena_prumernych_cen_vsech_potravin,
-    (ROUND(100 * (AVG(t_second.komodita_cena) / AVG(t_first.komodita_cena) - 1), 2) - 
-     ROUND(100 * (AVG(t_second.hrube_mzdy_prumer_czk) / AVG(t_first.hrube_mzdy_prumer_czk) - 1), 2)) AS
-    rozdil_zmen_v_cenach_oproti_zmenam_ve_mzdach
-FROM t_vladan_pivovarnik_project_sql_primary_final AS t_first
-JOIN t_vladan_pivovarnik_project_sql_primary_final AS t_second
-ON 
-    t_first.rok + 1 = t_second.rok
-GROUP BY t_second.rok
-ORDER BY rozdil_zmen_v_cenach_oproti_zmenam_ve_mzdach DESC;
+CREATE OR REPLACE VIEW v_salaries_prices_change AS
+	SELECT
+	    t_second.rok,
+	    ROUND(100 * (AVG(t_second.hrube_mzdy_prumer_czk) / AVG(t_first.hrube_mzdy_prumer_czk) - 1), 2) AS 
+	    meziroc_procent_zmena_prumer_hrubych_mezd_vsech_odvetvi,
+	    ROUND(100 * (AVG(t_second.komodita_cena) / AVG(t_first.komodita_cena) - 1), 2) AS
+	    meziroc_procent_zmena_prumer_cen_vsech_potravin,
+	    (ROUND(100 * (AVG(t_second.komodita_cena) / AVG(t_first.komodita_cena) - 1), 2) - 
+	     ROUND(100 * (AVG(t_second.hrube_mzdy_prumer_czk) / AVG(t_first.hrube_mzdy_prumer_czk) - 1), 2)) AS
+	    rozdil_zmen_v_cenach_oproti_zmenam_ve_mzdach
+	FROM t_vladan_pivovarnik_project_sql_primary_final AS t_first
+	JOIN t_vladan_pivovarnik_project_sql_primary_final AS t_second
+	ON t_first.rok + 1 = t_second.rok
+	GROUP BY t_second.rok
+	ORDER BY rozdil_zmen_v_cenach_oproti_zmenam_ve_mzdach DESC;
 	
-
 -- Má výška HDP vliv na zmìny ve mzdách a cenách potravin? Neboli, pokud HDP vzroste výraznìji v jednom
 -- roce, projeví se to na cenách potravin èi mzdách ve stejném nebo násdujícím roce výraznìjším rùstem?
+
+SELECT
+	gdp_change.rok,
+	gdp_change.meziroc_procent_zmena_HDP AS meziroc_zmena_hdp_proc,
+	salaries_prices_change.meziroc_procent_zmena_prumer_hrubych_mezd_vsech_odvetvi AS meziroc_zmena_mezd_proc,
+	salaries_prices_change.meziroc_procent_zmena_prumer_cen_vsech_potravin AS meziroc_zmena_cen_proc
+FROM (
+	SELECT
+		scnd_shift.country AS zeme,
+		scnd_shift.`year` AS rok,
+		ROUND((100 * ((scnd_shift.GDP / scnd.GDP) - 1)), 2) AS meziroc_procent_zmena_HDP
+	FROM t_vladan_pivovarnik_project_sql_secondary_final AS scnd
+	LEFT JOIN t_vladan_pivovarnik_project_sql_secondary_final AS scnd_shift
+	ON scnd_shift.`year` = scnd.`year` + 1 AND scnd.country = scnd_shift.country
+	WHERE
+		scnd_shift.country LIKE '%czech%rep%' AND
+		scnd_shift.`year` >= 2007 AND
+		scnd_shift.`year` <= 2018
+	) AS gdp_change
+LEFT JOIN (
+	SELECT 
+		rok,
+		meziroc_procent_zmena_prumer_hrubych_mezd_vsech_odvetvi,
+		meziroc_procent_zmena_prumer_cen_vsech_potravin	
+	FROM v_salaries_prices_change
+	) AS salaries_prices_change 
+ON gdp_change.rok = salaries_prices_change.rok;
