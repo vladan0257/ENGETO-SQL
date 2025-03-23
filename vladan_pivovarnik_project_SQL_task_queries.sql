@@ -62,6 +62,8 @@ LEFT JOIN t_vladan_pivovarnik_project_sql_primary_final AS t_second
 ON
 	t_first.komodita_jmeno = t_second.komodita_jmeno AND 
 	t_first.rok + 1 = t_second.rok
+WHERE
+	NOT ISNULL(t_second.komodita_jmeno)
 GROUP BY 
 	t_second.komodita_jmeno
 ORDER BY
