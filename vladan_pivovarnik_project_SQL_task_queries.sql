@@ -70,7 +70,7 @@ ORDER BY
 	prumerna_mezirocni_procentualni_cenova_zmena_2007_2018;
 
 -- Existuje rok, ve kterem byl mezirocni narust cen potravin vyrazne vyssi nez rust mezd (vetsi nez 10 %)?
-
+-- 1/2
 CREATE OR REPLACE VIEW v_salaries_prices_change AS
 	SELECT
 	    t_second.rok,
@@ -86,6 +86,10 @@ CREATE OR REPLACE VIEW v_salaries_prices_change AS
 	ON t_first.rok + 1 = t_second.rok
 	GROUP BY t_second.rok
 	ORDER BY rozdil_zmen_v_cenach_oproti_zmenam_ve_mzdach DESC;
+
+-- 2/2
+SELECT *
+FROM v_salaries_prices_change;
 	
 -- Ma vyska HDP vliv na zmeny ve mzdach a cenach potravin? Neboli, pokud HDP vzroste vyrazneji v jednom
 -- roce, projevi se to na cenach potravin ci mzdach ve stejnem nebo nasdujicim roce vyraznejsim rustem?
