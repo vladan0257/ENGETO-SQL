@@ -115,9 +115,6 @@ CREATE OR REPLACE VIEW v_salaries_prices_change_fin AS
 	) AS salaries_prices_change 
 	    ON gdp_change.rok = salaries_prices_change.rok;
 
-SELECT * 
-FROM v_salaries_prices_change_fin;
-
 -- 2/2
 SELECT
 	CONCAT(MIN(fin.rok), '-', MAX(fin.rok)) AS obdobi,	-- sledovane obdobi
