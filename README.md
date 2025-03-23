@@ -1,8 +1,10 @@
 ==ZDROJE DAT==<br />
 Vsechna publikovana data pochazeji z tabulek t_vladan_pivovarnik_project_sql_primary_final a t_vladan_pivovarnik_project_sql_secondary_final, jez jsou agregaty dat z Portalu otevrenych dat CR.
 
+
 ==MANIPULACE S DATY==<br />
 Byla snaha s daty minimalne manipulovat, avsak z duvodu potreby propojeni ruznych tabulek pres stejne hodnoty urciteho typu dat (v tomto pripade pres roky, ve kterych byla data sesbirana), autor pristoupil k prumerovani dat do jednoho roku tam, kde byla data sbirana ctvrtletne tak, aby je bylo mozno propojit s daty ktera byla sbirana na rocni bazi.
+
 
 ==ODPOVEDI NA VYZKUMNE OTAZKY==<br />
 1) Rostou v prubehu let mzdy ve vsech odvetvich, nebo v nekterych klesaji?<br />
@@ -19,6 +21,7 @@ Neexistuje. Max. rozdil mezi mezirocnim RUSTEM cen potravin a mezirocnim RUSTEM 
 
 5) Ma vyska HDP vliv na zmeny ve mzdach a cenach potravin? Neboli, pokud HDP vzroste vyrazneji v jednom roce, projevi se to na cenach potravin ci mzdach ve stejnem nebo nasledujicim roce vyraznejsim rustem?<br />
 Zmena HDP mohla mit v pozorovanem obdobi a s rocnim zpozdenim nejvetsi vliv na zmenu mezd. Nelze vsak rict, ze by slo o vliv vyrazny.
+
 
 ==POZNAMKY==<br />
 Autor se z duvodu absence f-ce pro vypocet korelace (CORR()) uchylil k manualnimu vypoctu (v casti 2/2 odpovedi na 5. vyzkumnou otazku).
