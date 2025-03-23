@@ -23,8 +23,7 @@ ORDER BY
 
 SELECT
     rok,
-    FLOOR(hrube_mzdy_prumer_czk) AS hrube_mzdy_prumer_czk,
-    hrube_mzdy_odvetvi_jmeno,
+    AVG(hrube_mzdy_prumer_czk) AS hrube_mzdy_prumer_czk,
     komodita_jmeno,
     komodita_merna_jednotka,
     komodita_merna_jednotka_mnozstvi,
@@ -44,6 +43,9 @@ WHERE
     komodita_jmeno LIKE '%chl%b%'
     ) AND
     NOT ISNULL(hrube_mzdy_odvetvi_jmeno)
+GROUP BY
+	komodita_jmeno,
+	rok
 ORDER BY
 	komodita_jmeno,
 	rok,
