@@ -1,4 +1,4 @@
--- Rostou v prùbìhu let mzdy ve všech odvìtvích, nebo v nìkterých klesají?
+-- Rostou v prubehu let mzdy ve vsech odvetvich, nebo v nekterych klesaji?
 
 SELECT DISTINCT
 	prim.hrube_mzdy_odvetvi_kod,
@@ -18,8 +18,8 @@ ORDER BY
 	prim.hrube_mzdy_odvetvi_kod,
 	prim.rok;
 	
--- Kolik je možné si koupit litrù mléka a kilogramù chleba za první a poslední 
--- srovnatelné období v dostupných datech cen a mezd?
+-- Kolik je mozne si koupit litru mleka a kilogramu chleba za prvni a posledni 
+-- srovnatelne obdobi v dostupnych datech cen a mezd?
 
 SELECT
     rok,
@@ -49,7 +49,7 @@ ORDER BY
 	rok,
 	hrube_mzdy_prumer_czk;
 
--- Která kategorie potravin zdražuje nejpomaleji (je u ní nejnižší percentuální meziroèní nárùst)?
+-- Ktera kategorie potravin zdrazuje nejpomaleji (je u ni nejnizsi percentualni mezirocni narust)?
 
 SELECT DISTINCT
 	t_second.komodita_jmeno,
@@ -65,7 +65,7 @@ GROUP BY
 ORDER BY
 	prumerna_mezirocni_procentualni_cenova_zmena_2007_2018;
 
--- Existuje rok, ve kterém byl meziroèní nárùst cen potravin výraznì vyšší než rùst mezd (vìtší než 10 %)?
+-- Existuje rok, ve kterem byl mezirocni narust cen potravin vyrazne vyssi nez rust mezd (vetsi nez 10 %)?
 
 CREATE OR REPLACE VIEW v_salaries_prices_change AS
 	SELECT
@@ -83,32 +83,76 @@ CREATE OR REPLACE VIEW v_salaries_prices_change AS
 	GROUP BY t_second.rok
 	ORDER BY rozdil_zmen_v_cenach_oproti_zmenam_ve_mzdach DESC;
 	
--- Má výška HDP vliv na zmìny ve mzdách a cenách potravin? Neboli, pokud HDP vzroste výraznìji v jednom
--- roce, projeví se to na cenách potravin èi mzdách ve stejném nebo násdujícím roce výraznìjším rùstem?
+-- Ma vyska HDP vliv na zmeny ve mzdach a cenach potravin? Neboli, pokud HDP vzroste vyrazneji v jednom
+-- roce, projevi se to na cenach potravin ci mzdach ve stejnem nebo nasdujicim roce vyraznejsim rustem?
 
-SELECT
-	gdp_change.rok,
-	gdp_change.meziroc_procent_zmena_HDP AS meziroc_zmena_hdp_proc,
-	salaries_prices_change.meziroc_procent_zmena_prumer_hrubych_mezd_vsech_odvetvi AS meziroc_zmena_mezd_proc,
-	salaries_prices_change.meziroc_procent_zmena_prumer_cen_vsech_potravin AS meziroc_zmena_cen_proc
-FROM (
+-- 1/2
+CREATE OR REPLACE VIEW v_salaries_prices_change_fin AS
 	SELECT
-		scnd_shift.country AS zeme,
-		scnd_shift.`year` AS rok,
-		ROUND((100 * ((scnd_shift.GDP / scnd.GDP) - 1)), 2) AS meziroc_procent_zmena_HDP
-	FROM t_vladan_pivovarnik_project_sql_secondary_final AS scnd
-	LEFT JOIN t_vladan_pivovarnik_project_sql_secondary_final AS scnd_shift
-	ON scnd_shift.`year` = scnd.`year` + 1 AND scnd.country = scnd_shift.country
-	WHERE
-		scnd_shift.country LIKE '%czech%rep%' AND
-		scnd_shift.`year` >= 2007 AND
-		scnd_shift.`year` <= 2018
+	    gdp_change.rok,
+	    gdp_change.meziroc_procent_zmena_HDP AS meziroc_zmena_hdp_proc,
+	    salaries_prices_change.meziroc_procent_zmena_prumer_hrubych_mezd_vsech_odvetvi AS meziroc_zmena_mezd_proc,
+	    salaries_prices_change.meziroc_procent_zmena_prumer_cen_vsech_potravin AS meziroc_zmena_cen_proc
+	FROM (
+	    SELECT
+	        scnd_shift.country AS zeme,
+	        scnd_shift.`year` AS rok,
+	        ROUND((100 * ((scnd_shift.GDP / scnd.GDP) - 1)), 2) AS meziroc_procent_zmena_HDP
+	    FROM t_vladan_pivovarnik_project_sql_secondary_final AS scnd
+	    LEFT JOIN t_vladan_pivovarnik_project_sql_secondary_final AS scnd_shift
+	        ON scnd_shift.`year` = scnd.`year` + 1 AND scnd.country = scnd_shift.country
+	    WHERE
+	        scnd_shift.country LIKE '%czech%rep%' AND
+	        scnd_shift.`year` >= 2007 AND
+	        scnd_shift.`year` <= 2018
 	) AS gdp_change
-LEFT JOIN (
-	SELECT 
-		rok,
-		meziroc_procent_zmena_prumer_hrubych_mezd_vsech_odvetvi,
-		meziroc_procent_zmena_prumer_cen_vsech_potravin	
-	FROM v_salaries_prices_change
+	LEFT JOIN (
+	    SELECT 
+	        rok,
+	        meziroc_procent_zmena_prumer_hrubych_mezd_vsech_odvetvi,
+	        meziroc_procent_zmena_prumer_cen_vsech_potravin	
+	    FROM v_salaries_prices_change
 	) AS salaries_prices_change 
-ON gdp_change.rok = salaries_prices_change.rok;
+	    ON gdp_change.rok = salaries_prices_change.rok;
+
+SELECT * 
+FROM v_salaries_prices_change_fin;
+
+-- 2/2
+SELECT
+	CONCAT(MIN(fin.rok), '-', MAX(fin.rok)) AS obdobi,	-- sledovane obdobi
+    (SUM(fin.meziroc_zmena_hdp_proc * fin.meziroc_zmena_mezd_proc) - 
+     (SUM(fin.meziroc_zmena_hdp_proc) * SUM(fin.meziroc_zmena_mezd_proc) / COUNT(*))) /
+    (SQRT(SUM(fin.meziroc_zmena_hdp_proc * fin.meziroc_zmena_hdp_proc) -
+          (SUM(fin.meziroc_zmena_hdp_proc) * SUM(fin.meziroc_zmena_hdp_proc) / COUNT(*))) *
+     SQRT(SUM(fin.meziroc_zmena_mezd_proc * fin.meziroc_zmena_mezd_proc) -
+          (SUM(fin.meziroc_zmena_mezd_proc) * 
+           SUM(fin.meziroc_zmena_mezd_proc) / COUNT(*))) 
+     ) AS 'korelace_HDP_(rok_R)_vs_MZDY_(rok_R)',	-- 1. korelace
+    (SUM(fin.meziroc_zmena_hdp_proc * fin_shift.meziroc_zmena_mezd_proc) - 
+     (SUM(fin.meziroc_zmena_hdp_proc) * SUM(fin_shift.meziroc_zmena_mezd_proc) / COUNT(*))) /
+    (SQRT(SUM(fin.meziroc_zmena_hdp_proc * fin.meziroc_zmena_hdp_proc) -
+          (SUM(fin.meziroc_zmena_hdp_proc) * SUM(fin.meziroc_zmena_hdp_proc) / COUNT(*))) *
+     SQRT(SUM(fin_shift.meziroc_zmena_mezd_proc * fin_shift.meziroc_zmena_mezd_proc) -
+          (SUM(fin_shift.meziroc_zmena_mezd_proc) * 
+           SUM(fin_shift.meziroc_zmena_mezd_proc) / COUNT(*))) 
+     ) AS 'korelace_HDP_(rok_R)_vs_MZDY_(rok_R+1)',	-- 2. korelace
+    (SUM(fin.meziroc_zmena_hdp_proc * fin.meziroc_zmena_cen_proc) - 
+     (SUM(fin.meziroc_zmena_hdp_proc) * SUM(fin.meziroc_zmena_cen_proc) / COUNT(*))) /
+    (SQRT(SUM(fin.meziroc_zmena_hdp_proc * fin.meziroc_zmena_hdp_proc) -
+          (SUM(fin.meziroc_zmena_hdp_proc) * SUM(fin.meziroc_zmena_hdp_proc) / COUNT(*))) *
+     SQRT(SUM(fin.meziroc_zmena_cen_proc * fin.meziroc_zmena_cen_proc) -
+          (SUM(fin.meziroc_zmena_cen_proc) * 
+           SUM(fin.meziroc_zmena_cen_proc) / COUNT(*))) 
+     ) AS 'korelace_HDP_(rok_R)_vs_CENY_(rok_R)',	-- 3. korelace
+    (SUM(fin.meziroc_zmena_hdp_proc * fin_shift.meziroc_zmena_cen_proc) - 
+     (SUM(fin.meziroc_zmena_hdp_proc) * SUM(fin_shift.meziroc_zmena_cen_proc) / COUNT(*))) /
+    (SQRT(SUM(fin.meziroc_zmena_hdp_proc * fin.meziroc_zmena_hdp_proc) -
+          (SUM(fin.meziroc_zmena_hdp_proc) * SUM(fin.meziroc_zmena_hdp_proc) / COUNT(*))) *
+     SQRT(SUM(fin_shift.meziroc_zmena_cen_proc * fin_shift.meziroc_zmena_cen_proc) -
+          (SUM(fin_shift.meziroc_zmena_cen_proc) * 
+           SUM(fin_shift.meziroc_zmena_cen_proc) / COUNT(*))) 
+     ) AS 'korelace_HDP_(rok_R)_vs_CENY_(rok_R+1)'	-- 4. korelace
+FROM v_salaries_prices_change_fin AS fin
+LEFT JOIN v_salaries_prices_change_fin AS fin_shift
+    ON fin_shift.rok = fin.rok + 1;
